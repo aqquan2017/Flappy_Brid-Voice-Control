@@ -2,43 +2,54 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Windows.Speech;
+using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using System.Security.Cryptography;
+using System.Runtime.CompilerServices;
 
 public class Bird_Control : MonoBehaviour
 {
-
     public static Bird_Control instance;
     // Start is called before the first frame update
     Rigidbody2D rig;
     Animator anim;
     bool startMove = false;
 
-    [HideInInspector] public AudioSource audio;
+    private AudioSource audioSource;
 
     [Header("Audio")]
     public AudioClip hit;
     public AudioClip jump;
     public AudioClip score;
 
+    [Range(0,1)]
     public float speed;
 
-    void Start()
+    private void Awake()
     {
         if (instance == null) instance = this;
         else Destroy(gameObject);
+    }
 
-        audio = GetComponent<AudioSource>();
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
         anim = GetComponent<Animator>();
         rig = GetComponent<Rigidbody2D>();
     }
 
     private void FixedUpdate()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && !startMove)
+        if (!startMove && (Input.GetKeyDown(KeyCode.Space) || 
+            VoiceRecognition.instance.playerSpeech == "Start"))
         {
+            GameController.instance.init.gameObject.SetActive(false);
+            VoiceRecognition.instance.playerSpeech = "";
             rig.simulated = true;
             GameController.instance.startCreatingObj();
+            VoiceRecognition.instance.RandomQuestion();
             startMove = true;
-            audio.PlayOneShot(jump, 1f);
+            audioSource.PlayOneShot(jump, 1f);
         }
     }
 
@@ -47,64 +58,91 @@ public class Bird_Control : MonoBehaviour
     {
         if (!GameController.instance.isDead)
         {
-            
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                    anim.SetTrigger("Flap");
-                    rig.velocity = Vector2.zero;
-                    rig.AddForce(speed * Vector2.up);
-                    audio.PlayOneShot(jump, 1f);
-                    StartCoroutine(touchReady());
-                   
-              
-                
-                
-                
+            Move();
 
-            }
-
-            if(transform.position.y > 6.5)
-            {
-                GameController.instance.isDead = true;
-                GameController.instance.end();
-                đead();
+            if(transform.position.y > 8)
+            {      
+                Dead();
             }
         }
         else
         {
-            if (Input.touchCount == 1)
+            //reset game
+            if ((Input.GetKeyDown(KeyCode.R) || VoiceRecognition.instance.playerSpeech == "Restart")
+                && GameController.instance.isDead)
             {
                 GameController.instance.repeatGame();
             }
-        }
 
+            if ((Input.GetKeyDown(KeyCode.Q) || VoiceRecognition.instance.playerSpeech == "Quit")
+    && GameController.instance.isDead)
+            {
+                Application.Quit();
+            }
+        }
+    }
+
+    private void Move()
+    {
+        if (Input.GetKeyDown(KeyCode.Space) ||
+    VoiceRecognition.instance.playerSpeech == VoiceRecognition.instance.questionText.text && startMove)
+        {
+            VoiceRecognition.instance.answerResult = true;
+            StartCoroutine(MoveToSaferPlace());
+            VoiceRecognition.instance.playerSpeech = "";
+            //anim.SetTrigger("Flap");
+            audioSource.PlayOneShot(jump, 1f);
+            //rig.velocity = Vector2.zero;
+            //rig.AddForce(speed * Vector2.up);
+        }
+    }
+
+    IEnumerator MoveToSaferPlace()
+    {
+        float desPos = 0;
+        if (GameController.instance.objPos.Count > 0)
+        {
+            desPos = GameController.instance.objPos.Dequeue();
+        }
+        else StopCoroutine(MoveToSaferPlace());
+        
+        float currentTime = Time.time;
+        Vector2 currentPos = transform.position;
+
+        while(transform.position.y != desPos)
+        {
+            anim.SetTrigger("Flap");
+            transform.position = Vector2.Lerp(currentPos , Vector2.up*desPos, Time.time - currentTime);
+            yield return new WaitForSeconds(0.06f);
+        }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        GameController.instance.isDead = true;
-        đead();
+        if(!GameController.instance.isDead)
+            Dead();
     }
 
     public void scoreSound()
     {
-        audio.PlayOneShot(score, 1f);
+        audioSource.PlayOneShot(score, 1f);
     }
 
     public void hitSound()
     {
-        audio.PlayOneShot(hit, 1f);
+        audioSource.PlayOneShot(hit, 1f);
     }
 
-    void đead()
+    public void Dead()
     {
+        StopAllCoroutines();
+        transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, transform.eulerAngles.z - 90);
+        rig.isKinematic = true;
+        rig.velocity = Vector2.down * 5;
+        GameController.instance.isDead = true;
         anim.SetTrigger("Die");
-        GameController.instance.end();
         hitSound();
-    }
-
-    IEnumerator touchReady()
-    {
-        yield return new WaitForSeconds(0.3f);
+        GameController.instance.isDead = true;
+        GameController.instance.End();
     }
 }

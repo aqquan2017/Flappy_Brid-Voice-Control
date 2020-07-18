@@ -8,12 +8,12 @@ public class GameController : MonoBehaviour
 {
     public static GameController instance;
 
-    public Text fpsText;
-    public float deltaTime;
-
     [Header("Obstacle")]
     public GameObject objDown;
     public GameObject objUp;
+
+    [HideInInspector]
+    public Queue<float> objPos;
 
     [Header("Range")]
     public float rangeMinimum;
@@ -21,7 +21,8 @@ public class GameController : MonoBehaviour
 
     [Header("UI")]
     public Text score;
-    public Text endGame;
+    public Text init;
+    public List<Text> endGame;
 
     int point =0;
 
@@ -36,14 +37,13 @@ public class GameController : MonoBehaviour
         {
             Destroy(gameObject);
         }
+        Application.targetFrameRate = 60;
+        Cursor.visible = false;
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Start()
     {
-        deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
-        float fps = 1.0f / deltaTime;
-        fpsText.text = "FPS: "+ Mathf.Ceil(fps).ToString();
+        objPos = new Queue<float>();
     }
 
     public void upScore()
@@ -52,27 +52,35 @@ public class GameController : MonoBehaviour
         score.text = point.ToString();
     }
 
-    public void end()
+    public void End()
     {
-        endGame.gameObject.SetActive(true);
+        for(int i=0; i<endGame.Count; i++)
+            endGame[i].gameObject.SetActive(true);
     }
 
     public void repeatGame()
     {
+        VoiceRecognition.instance.keywords = null;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void startCreatingObj()
     {
         if(!isDead)
-            InvokeRepeating("creatObstacle", 0, 1.5f);
+            InvokeRepeating("creatObstacle", 0, 4f);
     }
     void creatObstacle()
     {
-        float randomRange = Random.Range(rangeMinimum, rangeMaximum);
-        Vector2 posDown = new Vector2(objDown.transform.position.x , randomRange);
-        Vector2 posUp = new Vector2(objDown.transform.position.x, randomRange+12.5f);
-        Instantiate(objDown , posDown, objDown.transform.rotation);
-        Instantiate(objUp , posUp , objUp.transform.rotation);     
+        if (!isDead)
+        {
+            float randomRange = Random.Range(rangeMinimum, rangeMaximum);
+            Vector2 posDown = new Vector2(objDown.transform.position.x , randomRange);
+            Vector2 posUp = new Vector2(objDown.transform.position.x, randomRange+8f);
+            float middle = (posDown.y + posUp.y) / 2;
+            objPos.Enqueue(middle);
+        //    Debug.Log("ADD : " + middle + " NUM: " +objPos.Count);
+            Instantiate(objDown , posDown, objDown.transform.rotation);
+            Instantiate(objUp , posUp , objUp.transform.rotation);     
+        }
     }
 }

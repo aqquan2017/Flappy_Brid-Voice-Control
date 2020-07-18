@@ -11,13 +11,13 @@ public class RepeatBg : MonoBehaviour
     void Start()
     {
         startPos = transform.position;
-        col = GetComponent<BoxCollider2D>().size.x;
+        col = GetComponent<BoxCollider2D>().size.x / 2;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(transform.position.x < startPos.x - col)
+        if(transform.position.x <= startPos.x - col)
         {
             transform.position = startPos;
         }

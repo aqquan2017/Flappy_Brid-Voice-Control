@@ -6,10 +6,6 @@ public class ObstacleController : MonoBehaviour
 {
     // Start is called before the first frame update
     bool hitPoint = false;
-    void Start()
-    {
-        
-    }
 
     // Update is called once per frame
     void Update()
@@ -18,11 +14,21 @@ public class ObstacleController : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        if(!hitPoint && transform.position.x < -2 && gameObject.CompareTag("ObjDown"))
+        if(!hitPoint && transform.position.x < -0.3f && gameObject.CompareTag("ObjDown"))
         {
-            hitPoint = true;
-            GameController.instance.upScore();
-            Bird_Control.instance.scoreSound();
+            //ge╕t score
+            if (VoiceRecognition.instance.answerResult)
+            {
+                hitPoint = true;
+                GameController.instance.upScore();
+                Bird_Control.instance.scoreSound();
+                VoiceRecognition.instance.RandomQuestion();
+            }
+            else
+            {
+                Bird_Control.instance.Dead();
+                hitPoint = true;
+            }
         }
     }
 }
